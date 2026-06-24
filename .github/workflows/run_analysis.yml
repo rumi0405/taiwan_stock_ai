@@ -27,16 +27,7 @@ jobs:
       run: |
         python main.py
 
-    # 新增這一步：把剛剛生好的 md 檔案內容讀出來，存成一個臨時變數
-    - name: 讀取報告內容
-      id: read_report
-      run: |
-        REPORT_BODY=$(cat report_*.md)
-        # 處理換行符號以符合 GitHub 變數規範
-        REPORT_BODY="${REPORT_BODY//$'\n'/'<br>'}"
-        echo "content=$REPORT_BODY" >> $GITHUB_OUTPUT
-
-    # 修改外掛設定：把讀出來的內容直接當作信件 Body 發送！
+    # 官方外掛最完美的語法：用 file:// 直接把剛剛生好的 report.html 整份塞進信件內文發送！
     - name: 發送 AI 盤後報告到 Gmail
       uses: dawidd6/action-send-mail@v3
       with:
@@ -47,5 +38,4 @@ jobs:
         subject: 📊 台股 AI 盤後決策報告
         to: ${{ secrets.EMAIL_RECEIVER }}
         from: GitHub 自動化機器人
-        html_body: |
-          ${{ steps.read_report.outputs.content }}
+        html_body: file://report.html  # 直接讀取檔案內容當網頁內文發送

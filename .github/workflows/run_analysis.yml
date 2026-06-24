@@ -28,7 +28,7 @@ jobs:
         python main.py
 
     - name: 自動把產出的報告上傳存檔
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: 台股AI報告
         path: report_*.md

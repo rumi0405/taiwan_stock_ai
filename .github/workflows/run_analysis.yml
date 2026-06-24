@@ -2,7 +2,7 @@ name: 每日台股自動分析
 
 on:
   schedule:
-    - cron: '30 10 * * 1-5' # 國際標準時間 10:30，等於台灣時間每週一至週五下午 18:30 自動執行
+    - cron: '30 10 * * 1-5' # 台灣時間每週一至週五下午 18:30 自動執行
   workflow_dispatch: # 允許你隨時手動點擊執行
 
 jobs:
@@ -23,12 +23,29 @@ jobs:
 
     - name: 執行分析程式
       env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # 讀取你的保險箱金鑰
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
         python main.py
 
-    - name: 自動把產出的報告上傳存檔
+    - name: 自動把產出的報告上傳存檔備份
       uses: actions/upload-artifact@v4
       with:
         name: 台股AI報告
         path: report_*.md
+
+    # 新增外掛：由 GitHub 伺服器直接發信到你的 Gmail，完全不需 Gmail 密碼！
+    - name: 發送 AI 盤後報告到 Gmail
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        # 這裡借用 GitHub Actions 內建的權限發信
+        username: ${{ secrets.EMAIL_SENDER }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: 📊 台股 AI 盤後決策報告
+        to: ${{ secrets.EMAIL_RECEIVER }}
+        from: GitHub 自動化機器人
+        body: |
+          今日台股 AI 盤後決策報告已生成完畢！
+          詳細分析內容請見隨信附上的 Markdown 報告檔案。
+        attachments: report_*.md # 直接把生好的 13KB 報告當成附件寄給你！

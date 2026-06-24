@@ -67,7 +67,7 @@ def analyze_taiwan_stock(stock_id):
     """
     
     # 呼叫 Gemini 模型
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     response = model.generate_content(prompt)
     
     return response.text

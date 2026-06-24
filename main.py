@@ -3,38 +3,37 @@ import datetime
 import yfinance as yf
 import pandas as pd
 import google.generativeai as genai
+import smtplib  # 郵件連線模組
+from email.mime.text import MIMEText  # 郵件文字格式
+from email.header import Header  # 郵件標頭編碼
 
 # ==================== 1. 設定區 ====================
-# 要分析的台股清單（完全由你掌控，可隨時增減）
+# 你要監控的台股清單
 STOCK_LIST = ["3481.TW", "2409.TW", "2327.TW", "2408.TW"]
 
-# 初始化 Gemini API (從 GitHub 保險箱讀取金鑰)
+# 從 GitHub 保險箱讀取所有的私密變數
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+EMAIL_SENDER = os.environ.get("EMAIL_SENDER")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
+EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER")
+
 genai.configure(api_key=GEMINI_API_KEY)
 
 def analyze_taiwan_stock(stock_id):
     print(f"正在抓取 {stock_id} 的 Yahoo 財經數據...")
-    
-    # ==================== 2. 數據抓取與技術指標計算 ====================
-    # 抓取最近 60 天的日線資料，確保足夠計算布林通道 (20MA)
     ticker = yf.Ticker(stock_id)
     df = ticker.history(period="60d")
     
     if df.empty:
-        print(f"❌ 無法取得 {stock_id} 的數據")
         return None
         
-    # 計算常用均線
     df['MA5'] = df['Close'].rolling(window=5).mean()
     df['MA10'] = df['Close'].rolling(window=10).mean()
     df['MA20'] = df['Close'].rolling(window=20).mean()
-    
-    # 計算布林通道 (標準差設為 2)
     df['std'] = df['Close'].rolling(window=20).std()
     df['BB_Upper'] = df['MA20'] + (df['std'] * 2)
     df['BB_Lower'] = df['MA20'] - (df['std'] * 2)
     
-    # 取得最新一天的數據 (今日收盤)
     today_data = df.iloc[-1]
     current_price = round(today_data['Close'], 2)
     ma5 = round(today_data['MA5'], 2)
@@ -43,15 +42,11 @@ def analyze_taiwan_stock(stock_id):
     bb_upper = round(today_data['BB_Upper'], 2)
     bb_lower = round(today_data['BB_Lower'], 2)
     volume = int(today_data['Volume'])
-    
-    # 利用近期波動推算型態學支撐壓力
     recent_max = round(df['High'].tail(10).max(), 2)
     recent_min = round(df['Low'].tail(10).min(), 2)
 
-    # ==================== 3. 構建 Gemini AI 提示詞 ====================
     prompt = f"""
     你是一位精通台灣股市的資深投資專家。請針對以下提供的真實盤後數據，進行深度的邏輯思考與策略分析。
-    
     個股代號: {stock_id}
     今日收盤價: {current_price} 元
     今日成交量: {volume} 股
@@ -65,12 +60,35 @@ def analyze_taiwan_stock(stock_id):
     3. 【籌碼與資金流向推論】：從今日量價表現與型態，推論主力目前的資金動向（吸籌震盪、高檔調節或洗盤）。
     4. 【關鍵風險提示】：列出短中期操作該個股的潛在風險，並給予明確的操作檢查清單。
     """
-    
-    # 呼叫 Gemini 模型
     model = genai.GenerativeModel('gemini-2.5-flash')
     response = model.generate_content(prompt)
-    
     return response.text
+
+def send_gmail(report_content):
+    """將報告透過 Gmail 伺服器發送"""
+    if not all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
+        print("⚠️ 未完整配置郵件保險箱變數，跳過寄信階段。")
+        return
+
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    
+    # 將報告中的換行轉換為網頁 HTML 的換行標籤，讓郵件排版好看
+    html_content = report_content.replace("\n", "<br>")
+    msg = MIMEText(html_content, 'html', 'utf-8')
+    
+    # 設定信件主旨與收發雙方資訊
+    msg['Subject'] = Header(f"📊 {today_str} 台股 AI 盤後決策報告", 'utf-8')
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = EMAIL_RECEIVER
+
+    try:
+        print("正在安全連接 Gmail SMTP 伺服器...")
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_SENDER, [EMAIL_RECEIVER], msg.as_string())
+        print("✅ 成功將 AI 盤後報告寄送至你的 Gmail 信箱！")
+    except Exception as e:
+        print(f"❌ 郵件發送失敗，原因: {e}")
 
 # ==================== 主程式執行 ====================
 if __name__ == "__main__":
@@ -85,7 +103,10 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"分析 {stock} 時發生錯誤: {e}")
             
-    # 將報告儲存為 Markdown 檔案
+    # 本地備份檔案
     with open(f"report_{today_str}.md", "w", encoding="utf-8") as f:
         f.write(final_report)
-    print("🎉 報告生成完畢！")
+    print("🎉 本地檔案生成完畢！")
+    
+    # 發動自動寄信
+    send_gmail(final_report)

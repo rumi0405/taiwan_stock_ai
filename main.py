@@ -57,6 +57,7 @@ def analyze_taiwan_stock(stock_id):
 
 # ==================== 主程式執行 ====================
 if __name__ == "__main__":
+    import time  # 引入時間模組
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     final_report = f"# 🎯 {today_str} 台股 AI 盤後決策報告\n\n"
     
@@ -65,6 +66,11 @@ if __name__ == "__main__":
             report = analyze_taiwan_stock(stock)
             if report:
                 final_report += f"## 📈 個股分析: {stock}\n" + report + "\n\n---\n\n"
+            
+            # 💡 核心修正：每跑完一支股票，強制讓雲端機器人靈魂出竅休息 10 秒鐘，徹底破解 Google 的 429 流量防禦！
+            print("為了防止 API 流量超限，冷卻 10 秒鐘...")
+            time.sleep(10)
+            
         except Exception as e:
             print(f"分析 {stock} 時發生錯誤: {e}")
             

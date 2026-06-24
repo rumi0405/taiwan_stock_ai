@@ -13,9 +13,9 @@ STOCK_LIST = ["3481.TW", "2409.TW", "2327.TW", "2408.TW"]
 
 # 從 GitHub 保險箱讀取所有的私密變數
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-EMAIL_SENDER = os.environ.get("EMAIL_SENDER")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
-EMAIL_RECEIVER = os.environ.get("EMAIL_RECEIVER")
+EMAIL_SENDER = os.environ.get("sancc2011@gmail.com")
+EMAIL_PASSWORD = os.environ.get("xcrtbavzycxnajts")
+EMAIL_RECEIVER = os.environ.get("sancc2011@gmail.com")
 
 genai.configure(api_key=GEMINI_API_KEY)
 

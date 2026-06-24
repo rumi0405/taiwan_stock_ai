@@ -3,7 +3,7 @@ name: 每日台股自動分析
 on:
   schedule:
     - cron: '30 10 * * 1-5' # 台灣時間每週一至週五下午 18:30 自動執行
-  workflow_dispatch: # 允許你隨時手動點擊執行
+  workflow_dispatch: # 允許手動執行
 
 jobs:
   analyze:
@@ -27,25 +27,25 @@ jobs:
       run: |
         python main.py
 
-    - name: 自動把產出的報告上傳存檔備份
-      uses: actions/upload-artifact@v4
-      with:
-        name: 台股AI報告
-        path: report_*.md
+    # 新增這一步：把剛剛生好的 md 檔案內容讀出來，存成一個臨時變數
+    - name: 讀取報告內容
+      id: read_report
+      run: |
+        REPORT_BODY=$(cat report_*.md)
+        # 處理換行符號以符合 GitHub 變數規範
+        REPORT_BODY="${REPORT_BODY//$'\n'/'<br>'}"
+        echo "content=$REPORT_BODY" >> $GITHUB_OUTPUT
 
-    # 新增外掛：由 GitHub 伺服器直接發信到你的 Gmail，完全不需 Gmail 密碼！
+    # 修改外掛設定：把讀出來的內容直接當作信件 Body 發送！
     - name: 發送 AI 盤後報告到 Gmail
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
         server_port: 465
-        # 這裡借用 GitHub Actions 內建的權限發信
         username: ${{ secrets.EMAIL_SENDER }}
         password: ${{ secrets.EMAIL_PASSWORD }}
         subject: 📊 台股 AI 盤後決策報告
         to: ${{ secrets.EMAIL_RECEIVER }}
         from: GitHub 自動化機器人
-        body: |
-          今日台股 AI 盤後決策報告已生成完畢！
-          詳細分析內容請見隨信附上的 Markdown 報告檔案。
-        attachments: report_*.md # 直接把生好的 13KB 報告當成附件寄給你！
+        html_body: |
+          ${{ steps.read_report.outputs.content }}

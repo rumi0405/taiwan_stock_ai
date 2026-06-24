@@ -1,5 +1,6 @@
 import os
 import datetime
+import time  # 確保引入時間模組
 import yfinance as yf
 import pandas as pd
 import google.generativeai as genai
@@ -16,6 +17,7 @@ def analyze_taiwan_stock(stock_id):
     df = ticker.history(period="60d")
     
     if df.empty:
+        print(f"❌ 無法取得 {stock_id} 的數據")
         return None
         
     df['MA5'] = df['Close'].rolling(window=5).mean()
@@ -57,7 +59,6 @@ def analyze_taiwan_stock(stock_id):
 
 # ==================== 主程式執行 ====================
 if __name__ == "__main__":
-    import time  # 引入時間模組
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     final_report = f"# 🎯 {today_str} 台股 AI 盤後決策報告\n\n"
     
@@ -67,13 +68,15 @@ if __name__ == "__main__":
             if report:
                 final_report += f"## 📈 個股分析: {stock}\n" + report + "\n\n---\n\n"
             
-            # 💡 核心修正：每跑完一支股票，強制讓雲端機器人靈魂出竅休息 10 秒鐘，徹底破解 Google 的 429 流量防禦！
             print("為了防止 API 流量超限，冷卻 10 秒鐘...")
             time.sleep(10)
             
         except Exception as e:
             print(f"分析 {stock} 時發生錯誤: {e}")
             
-    with open(f"report_{today_str}.md", "w", encoding="utf-8") as f:
-        f.write(final_report)
-    print("🎉 本地檔案生成完畢！")
+    # 固定存成一個名字叫做 report.html 的檔案，方便寄信外掛直接讀取內文
+    # 我們順便把換行改成網頁看的 HTML 換行格式 <br>
+    html_content = final_report.replace("\n", "<br>")
+    with open("report.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print("🎉 本地 HTML 檔案生成完畢！")

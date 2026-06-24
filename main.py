@@ -3,20 +3,11 @@ import datetime
 import yfinance as yf
 import pandas as pd
 import google.generativeai as genai
-import smtplib  # 郵件連線模組
-from email.mime.text import MIMEText  # 郵件文字格式
-from email.header import Header  # 郵件標頭編碼
 
 # ==================== 1. 設定區 ====================
-# 你要監控的台股清單
 STOCK_LIST = ["3481.TW", "2409.TW", "2327.TW", "2408.TW"]
 
-# 從 GitHub 保險箱讀取所有的私密變數
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-EMAIL_SENDER = os.environ.get("sancc2011@gmail.com")
-EMAIL_PASSWORD = os.environ.get("xcrtbavzycxnajts")
-EMAIL_RECEIVER = os.environ.get("sancc2011@gmail.com")
-
 genai.configure(api_key=GEMINI_API_KEY)
 
 def analyze_taiwan_stock(stock_id):
@@ -64,32 +55,6 @@ def analyze_taiwan_stock(stock_id):
     response = model.generate_content(prompt)
     return response.text
 
-def send_gmail(report_content):
-    """將報告透過 Gmail 伺服器發送"""
-    if not all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER]):
-        print("⚠️ 未完整配置郵件保險箱變數，跳過寄信階段。")
-        return
-
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
-    
-    # 將報告中的換行轉換為網頁 HTML 的換行標籤，讓郵件排版好看
-    html_content = report_content.replace("\n", "<br>")
-    msg = MIMEText(html_content, 'html', 'utf-8')
-    
-    # 設定信件主旨與收發雙方資訊
-    msg['Subject'] = Header(f"📊 {today_str} 台股 AI 盤後決策報告", 'utf-8')
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = EMAIL_RECEIVER
-
-    try:
-        print("正在安全連接 Gmail SMTP 伺服器...")
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_SENDER, [EMAIL_RECEIVER], msg.as_string())
-        print("✅ 成功將 AI 盤後報告寄送至你的 Gmail 信箱！")
-    except Exception as e:
-        print(f"❌ 郵件發送失敗，原因: {e}")
-
 # ==================== 主程式執行 ====================
 if __name__ == "__main__":
     today_str = datetime.date.today().strftime("%Y-%m-%d")
@@ -103,10 +68,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"分析 {stock} 時發生錯誤: {e}")
             
-    # 本地備份檔案
     with open(f"report_{today_str}.md", "w", encoding="utf-8") as f:
         f.write(final_report)
     print("🎉 本地檔案生成完畢！")
-    
-    # 發動自動寄信
-    send_gmail(final_report)

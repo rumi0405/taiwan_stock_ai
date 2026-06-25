@@ -6,7 +6,7 @@ import pandas as pd
 import google.generativeai as genai
 
 # ==================== 1. 設定區 ====================
-STOCK_LIST = ["3481.TW", "2409.TW", "2327.TW", "2408.TW"]
+STOCK_LIST = ["3481.TW", "2327.TW"]
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
